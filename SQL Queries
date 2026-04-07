@@ -1,0 +1,111 @@
+
+SELECT 
+    YEAR(created_at) AS year,
+    MONTH(created_at) AS month,
+    COUNT(website_session_id) AS total_sessions
+FROM website_session
+GROUP BY year, month
+ORDER BY year, month;
+
+SELECT 
+    ws.device_type,
+    COUNT(DISTINCT ws.website_session_id) AS sessions,
+    COUNT(DISTINCT o.order_id) AS orders,
+    COUNT(DISTINCT o.order_id) /
+    COUNT(DISTINCT ws.website_session_id) AS conversion_rate
+FROM website_session ws
+LEFT JOIN orders o
+ON ws.website_session_id = o.website_session_id
+GROUP BY ws.device_type
+ORDER BY conversion_rate DESC;
+
+
+
+STEP 1:
+CREATE temporary table entry_pages
+SELECT website_session_id,
+MIN(website_pageview_id) AS first_pageview_id
+FROM website_pageviews
+GROUP BY website_session_id;
+
+STEP 2:
+SELECT wp.pageview_url AS landing_page,
+COUNT(distinct ep.website_session_id) AS sessions,
+COUNT(distinct o.order_id) AS orders,
+COUNT(distinct o.order_id) / count(distinct ep.website_session_id) AS conversion_rate
+FROM entry_pages ep
+JOIN website_pageviews wp
+ON ep.first_pageview_id = wp.website_pageview_id
+LEFT JOIN orders o
+ON ep.website_session_id = o.website_session_id
+GROUP BY landing_page
+ORDER BY conversion_rate desc;
+
+
+SELECT 
+    product_id,
+    SUM(price_usd) AS revenue,
+    RANK() OVER (ORDER BY SUM(price_usd) DESC) AS revenue_rank
+FROM order_items
+GROUP BY product_id;
+
+
+SELECT 
+    YEAR(created_at) AS year,
+    MONTH(created_at) AS month,
+    AVG(price_usd) AS avg_order_value
+FROM orders
+GROUP BY year, month
+ORDER BY year, month;
+
+
+SELECT 
+    oi1.product_id AS product_1,
+    oi2.product_id AS product_2,
+    COUNT(*) AS times_bought_together
+FROM order_items oi1
+JOIN order_items oi2
+ON oi1.order_id = oi2.order_id
+AND oi1.product_id < oi2.product_id
+GROUP BY product_1, product_2
+ORDER BY times_bought_together DESC;
+
+
+SELECT
+    COUNT(DISTINCT ws.website_session_id) AS sessions,
+    COUNT(DISTINCT CASE WHEN wp.pageview_url = '/products' 
+    THEN ws.website_session_id END) AS product_page,
+    COUNT(DISTINCT CASE WHEN wp.pageview_url = '/cart' 
+    THEN ws.website_session_id END) AS cart_page,
+    COUNT(DISTINCT CASE WHEN wp.pageview_url = '/shipping' 
+    THEN ws.website_session_id END) AS shipping_page,
+    COUNT(DISTINCT CASE WHEN wp.pageview_url = '/billing' 
+    THEN ws.website_session_id END) AS billing_page,
+    COUNT(DISTINCT o.order_id) AS orders
+FROM website_sessions ws
+LEFT JOIN website_pageviews wp
+ON ws.website_session_id = wp.website_session_id
+LEFT JOIN orders o
+ON ws.website_session_id = o.website_session_id;
+
+
+
+SELECT 
+    product_id,
+    SUM(price_usd - cogs_usd) AS profit
+FROM order_items
+GROUP BY product_id
+ORDER BY profit DESC;
+
+
+
+SELECT 
+    oi.product_id,
+    COUNT(r.refund_id) AS refunds,
+    COUNT(oi.order_item_id) AS total_orders,
+    COUNT(r.refund_id) / COUNT(oi.order_item_id) AS refund_rate
+FROM order_items oi
+LEFT JOIN order_item_refunds r
+ON oi.order_item_id = r.order_item_id
+GROUP BY oi.product_id;
+
